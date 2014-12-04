@@ -96,255 +96,315 @@ Recognition commands
 */
 
 $EENUM
+  FxOpenBracket, FxCloseBracket, FxOpenADT, FxCloseADT,
+  FxName, FxNumber, FxIdentifier FxVariable, FxChar, FxBrackets, FxADT;
+
+$EENUM
   CmdChar, CmdNumber, CmdName, CmdIdent,
   CmdBrackets, CmdADT, CmdEmpty,
   CmdRepeated, CmdVar, CmdOpenedE, CmdClosedE,
-  CmdComment, CmdPrint, CmdCreateVector, CmdTakeFixed,
-  CmdCheckChar, CmdCheckNumber, CmdCheckName, CmdCheckIdent,
-  CmdCheckBrackets, CmdCheckADT, CmdRepeatedST;
+  CmdComment, CmdPrint, CmdCreateVector, CmdRepeatedST;
 
-$FORWARD SaveBrackets;
+$FORWARD SaveBrackets, TakeInner;
 
 // (LeftPtr s.Num s.FixCount t.FixedCommand1 ... t.FixedCommandN)
 // (RightPtr s.Num s.FixCount t.FixedCommand1 ... t.FixedCommandN)
 
 
 GenPattern {
-  // LeftPtr fixed-size recognition
-  e.Pattern-B (LeftPtr s.Num) e.Pattern-E
-  (e.Vars) (e.Commands) = 
-    <WriteLine '--------------------------------------------------------------------------------'>
-    <WriteLine 'new left ptr'>
-    <GenPattern
-      e.Pattern-B (LeftPtr s.Num 0) e.Pattern-E
-      (e.Vars) (e.Commands (CmdCreateVector AlgLeft s.Num))
-    >;
-    //-------------------------
-    // ???
-    //-------------------------
+  // If we already make fixed elements, we must deal with them
 
-  e.Pattern-B (e.FixedCommands LeftPtr s.Num s.FixCount) (TkChar s.Char) e.Pattern-E
-  (e.Vars) (e.Commands) = 
+  // First part (chars, numbers, names and identifiers)
+
+  // From left
+
+  e.Pattern-B (FxChar s.Num s.NumArray s.FixCount s.Char) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'cmd char left, arr_num:' s.NumArray '|arr_idx:' s.FixCount '||value:' s.Char>
+    <GenPattern
+      e.Pattern-B
+      (e.Vars) (e.Commands (CmdChar AlgLeft s.Num s.NumArray s.FixCount s.Char))
+      e.Pattern-E
+    >;
+
+  e.Pattern-B (FxNumber s.Num s.NumArray s.FixCount s.Char) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'cmd number left, arr_num:' s.NumArray '|arr_idx:' s.FixCount '||value:' s.Numner>
+    <GenPattern
+      e.Pattern-B
+      (e.Vars) (e.Commands (CmdNumber AlgLeft s.Num s.NumArray s.FixCount s.Number))
+      e.Pattern-E
+    >;
+
+  e.Pattern-B (FxNumber s.Num s.NumArray s.FixCount e.Name) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'cmd name left, arr_num:' s.NumArray '|arr_idx:' s.FixCount '||value:' e.Name>
+    <GenPattern
+      e.Pattern-B
+      (e.Vars) (e.Commands (CmdName AlgLeft s.Num s.NumArray s.FixCount e.Name))
+      e.Pattern-E
+    >;
+
+  e.Pattern-B (FxNumber s.Num s.NumArray s.FixCount e.Name) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'cmd ident left, arr_num:' s.NumArray '|arr_idx:' s.FixCount '||value:' e.Name>
+    <GenPattern
+      e.Pattern-B
+      (e.Vars) (e.Commands (CmdIdent AlgLeft s.Num s.NumArray s.FixCount e.Name))
+      e.Pattern-E
+    >;
+
+  // And from right
+
+  e.Pattern-B (FxChar s.Num s.NumArray s.FixCount s.Char) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'cmd char right, arr_num:' s.NumArray '|arr_idx:' s.FixCount '||value:' s.Char>
+    <GenPattern
+      e.Pattern-B
+      (e.Vars) (e.Commands (CmdChar AlgRight s.Num s.NumArray s.FixCount s.Char))
+      e.Pattern-E
+    >;
+
+  e.Pattern-B (FxNumber s.Num s.NumArray s.FixCount s.Char) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'cmd number right, arr_num:' s.NumArray '|arr_idx:' s.FixCount '||value:' s.Numner>
+    <GenPattern
+      e.Pattern-B
+      (e.Vars) (e.Commands (CmdNumber AlgRight s.Num s.NumArray s.FixCount s.Number))
+      e.Pattern-E
+    >;
+
+  e.Pattern-B (FxNumber s.Num s.NumArray s.FixCount e.Name) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'cmd name right, arr_num:' s.NumArray '|arr_idx:' s.FixCount '||value:' e.Name>
+    <GenPattern
+      e.Pattern-B
+      (e.Vars) (e.Commands (CmdName AlgRight s.Num s.NumArray s.FixCount e.Name))
+      e.Pattern-E
+    >;
+
+  e.Pattern-B (FxNumber s.Num s.NumArray s.FixCount e.Name) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'cmd ident right, arr_num:' s.NumArray '|arr_idx:' s.FixCount '||value:' e.Name>
+    <GenPattern
+      e.Pattern-B
+      (e.Vars) (e.Commands (CmdIdent AlgRight s.Num s.NumArray s.FixCount e.Name))
+      e.Pattern-E
+    >;
+
+  // Second part (brackets, ADT)
+
+  // From left
+
+  e.Pattern-B (FxOpenBracket s.Num s.Inner s.NumArray s.FixCount) e.Pattern-M (FxCloseBracket s.Num s.Inner s.NumArray s.FixCount) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'cmd brackets left, arr_num:' s.NumArray '|inner_num:' s.Inner>
+    <GenPattern
+      e.Pattern-B
+      (LeftPtr s.Inner <Inc s.NumArray> 0) e.Pattern-M (RightPtr s.Inner <Inc s.NumArray> 0) e.Pattern-E
+      (e.Vars) (e.Commands (CmdBrackets AlgLeft s.Num s.Inner s.NumArray s.FixCount))
+    >;
+
+  e.Pattern-B (FxOpenADT s.Num s.Inner s.NumArray s.FixCount) (TkName e.Name) e.Pattern-M (FxCloseADT s.Num s.Inner s.NumArray s.FixCount) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'cmd ADT left, arr_num:' s.NumArray '|inner_num:' s.Inner>
+    <GenPattern
+      e.Pattern-B
+      (LeftPtr s.Inner <Inc s.NumArray> 0) e.Pattern-M (RightPtr s.Inner <Inc s.NumArray> 0) e.Pattern-E
+      (e.Vars) (e.Commands (CmdADT AlgLeft s.Num s.Inner s.NumArray s.FixCount e.Name))
+    >;
+
+  // And from right
+
+  e.Pattern-B (FxOpenBracket s.Num s.Inner s.NumArray s.FixCount) e.Pattern-M (FxCloseBracket s.Num s.Inner s.NumArray s.FixCount) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'cmd brackets right, arr_num:' s.NumArray '|inner_num:' s.Inner>
+    <GenPattern
+      e.Pattern-B (LeftPtr s.Inner <Inc s.NumArray> 0) e.Pattern-M (RightPtr s.Inner <Inc s.NumArray> 0) e.Pattern-E
+      (e.Vars) (e.Commands (CmdBrackets AlgRight s.Num s.Inner s.NumArray s.FixCount))
+    >;
+
+  // Fixed-length left accumulation
+
+  e.Pattern-B (LeftPtr s.Num s.NumArray s.FixCount e.Fixed) (TkChar s.Char) e.Pattern-E
+  (e.Vars) (e.Commands) =
     <WriteLine 'next char left'>
     <GenPattern
       e.Pattern-B
-      (e.FixedCommands (CmdCheckChar s.Char s.FixCount) LeftPtr s.Num <Inc s.FixCount>)
+      (
+        LeftPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxChar s.Num s.NumArray s.FixCount s.Char)
+      )
       e.Pattern-E
-      (e.Vars)
-      (e.Commands)
+      (e.Vars) (e.Commands)
     >;
-    //-------------------------
-    // Approved
-    //-------------------------
 
-  e.Pattern-B (e.FixedCommands LeftPtr s.Num s.FixCount) (TkNumber s.Number) e.Pattern-E
-  (e.Vars) (e.Commands) = 
+  e.Pattern-B (LeftPtr s.Num s.NumArray s.FixCount e.Fixed) (TkNumber s.Number) e.Pattern-E
+  (e.Vars) (e.Commands) =
     <WriteLine 'next number left'>
     <GenPattern
       e.Pattern-B
-      (e.FixedCommands (CmdCheckNumber s.Number s.FixCount) LeftPtr s.Num <Inc s.FixCount>)
+      (
+        LeftPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxNumber s.Num s.NumArray s.FixCount s.Number)
+      )
       e.Pattern-E
-      (e.Vars)
-      (e.Commands)
+      (e.Vars) (e.Commands)
     >;
-    //-------------------------
-    // Approved
-    //-------------------------
 
-  e.Pattern-B (e.FixedCommands LeftPtr s.Num s.FixCount) (TkName e.Name) e.Pattern-E
-  (e.Vars) (e.Commands) = 
+  e.Pattern-B (LeftPtr s.Num s.NumArray s.FixCount e.Fixed) (TkName e.Name) e.Pattern-E
+  (e.Vars) (e.Commands) =
     <WriteLine 'next name left'>
     <GenPattern
       e.Pattern-B
-      (e.FixedCommands (CmdCheckName e.Name s.FixCount) LeftPtr s.Num <Inc s.FixCount>)
+      (
+        LeftPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxName s.Num s.NumArray s.FixCount e.Name)
+      )
       e.Pattern-E
-      (e.Vars)
-      (e.Commands)
+      (e.Vars) (e.Commands)
     >;
-    //-------------------------
-    // Approved
-    //-------------------------
 
-  e.Pattern-B (e.FixedCommands LeftPtr s.Num s.FixCount) (TkIdentifier e.Name) e.Pattern-E
-  (e.Vars) (e.Commands) = 
+  e.Pattern-B (LeftPtr s.Num s.NumArray s.FixCount e.Fixed) (TkIdentifier e.Name) e.Pattern-E
+  (e.Vars) (e.Commands) =
     <WriteLine 'next ident left'>
     <GenPattern
       e.Pattern-B
-      (e.FixedCommands (CmdCheckIdent e.Name s.FixCount) LeftPtr s.Num <Inc s.FixCount>)
+      (
+        LeftPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxIdentifier s.Num s.NumArray s.FixCount e.Name)
+      )
       e.Pattern-E
-      (e.Vars)
-      (e.Commands)
+      (e.Vars) (e.Commands)
     >;
-    //-------------------------
-    // Approved
-    //-------------------------
 
-  // RightPtr fixed-size recognition
-    e.Pattern-B (RightPtr s.Num) e.Pattern-E
-  (e.Vars) (e.Commands) = 
-    <WriteLine 'new right ptr'>
-    <GenPattern
-      e.Pattern-B (RightPtr s.Num 0) e.Pattern-E
-      (e.Vars) (e.Commands (CmdCreateVector AlgRight s.Num))
-    >;
-    //-------------------------
-    // ???
-    //-------------------------
+  // Fixed-length right accumulation
 
-  e.Pattern-B (TkChar s.Char) (RightPtr s.Num s.FixCount e.FixedCommands) e.Pattern-E
-  (e.Vars) (e.Commands) = 
+  e.Pattern-B (TkChar s.Char) (RightPtr s.Num s.NumArray s.FixCount e.Fixed) e.Pattern-E
+  (e.Vars) (e.Commands) =
     <WriteLine 'next char right'>
     <GenPattern
       e.Pattern-B
-      (RightPtr s.Num <Inc s.FixCount> e.FixedCommands (CmdCheckChar s.Char s.FixCount))
+      (
+        RightPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxChar s.Num s.NumArray s.Char)
+      )
       e.Pattern-E
-      (e.Vars)
-      (e.Commands)
+      (e.Vars) (e.Commands)
     >;
-    //-------------------------
-    // Approved
-    //-------------------------
 
-  e.Pattern-B (TkNumber s.Number) (RightPtr s.Num s.FixCount e.FixedCommands) e.Pattern-E
-  (e.Vars) (e.Commands) = 
+  e.Pattern-B (TkNumber s.Number) (RightPtr s.Num s.NumArray s.FixCount e.Fixed) e.Pattern-E
+  (e.Vars) (e.Commands) =
     <WriteLine 'next number right'>
     <GenPattern
       e.Pattern-B
-      (RightPtr s.Num <Inc s.FixCount> e.FixedCommands (CmdCheckNumber s.Number s.FixCount))
+      (
+        RightPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxNumber s.Num s.NumArray s.Number)
+      )
       e.Pattern-E
-      (e.Vars)
-      (e.Commands)
+      (e.Vars) (e.Commands)
     >;
-    //-------------------------
-    // Approved
-    //-------------------------
 
-  e.Pattern-B (TkName e.Name) (RightPtr s.Num s.FixCount e.FixedCommands) e.Pattern-E
-  (e.Vars) (e.Commands) = 
+  e.Pattern-B (TkName e.Name) (RightPtr s.Num s.NumArray s.FixCount e.Fixed) e.Pattern-E
+  (e.Vars) (e.Commands) =
     <WriteLine 'next name right'>
     <GenPattern
       e.Pattern-B
-      (RightPtr s.Num <Inc s.FixCount> e.FixedCommands (CmdCheckName e.Name s.FixCount))
+      (
+        RightPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxName s.Num s.NumArray e.Name)
+      )
       e.Pattern-E
-      (e.Vars)
-      (e.Commands)
+      (e.Vars) (e.Commands)
     >;
-    //-------------------------
-    // Approved
-    //-------------------------
 
-  e.Pattern-B (TkIdentifier e.Name) (RightPtr s.Num s.FixCount e.FixedCommands) e.Pattern-E
-  (e.Vars) (e.Commands) = 
+  e.Pattern-B (TkIdentifier e.Name) (RightPtr s.Num s.NumArray s.FixCount e.Fixed) e.Pattern-E
+  (e.Vars) (e.Commands) =
     <WriteLine 'next ident right'>
     <GenPattern
       e.Pattern-B
-      (RightPtr s.Num <Inc s.FixCount> e.FixedCommands (CmdCheckIdent e.Name s.FixCount))
+      (
+        RightPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxIdentifier s.Num s.NumArray e.Name)
+      )
       e.Pattern-E
-      (e.Vars)
-      (e.Commands)
+      (e.Vars) (e.Commands)
     >;
-    //-------------------------
-    // Approved
-    //-------------------------
 
-    // Pointers which meets will be annihilated
-  e.Pattern-B (e.FixedCommandsLeft LeftPtr s.Num s.FixCountLeft)
-  (RightPtr s.Num s.FixCountRight e.FixedCommandsRight) e.Pattern-E
+  // Brackets accumulation
+
+  e.Pattern-B (LeftPtr s.Num s.NumArray s.FixCount e.Fixed) (TkOpenBracket s.Inner)
+  e.Pattern-M (TkCloseBracket s.Inner) e.Pattern-E
   (e.Vars) (e.Commands) =
+    <WriteLine 'brackets left||' s.Num '::' s.NumArray '::' s.FixCount>
+    <GenPattern
+      e.Pattern-B
+      (
+        LeftPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxOpenBracket s.Num s.Inner s.NumArray s.FixCount) e.Pattern-M (FxCloseBracket s.Num s.Inner s.NumArray s.FixCount)
+      )
+      e.Pattern-E
+      (e.Vars) (e.Commands)
+    >;
+
+  e.Pattern-B (TkOpenBracket s.Inner) e.Pattern-M (TkCloseBracket s.Inner)
+  (RightPtr s.Num s.NumArray s.FixCount e.Fixed) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'brackets right||' s.Num '::' s.NumArray '::' s.FixCount>
+    <GenPattern
+      e.Pattern-B
+      (
+        RightPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxOpenBracket s.Num s.Inner s.NumArray s.FixCount) e.Pattern-M (FxCloseBracket s.Num s.Inner s.NumArray s.FixCount)
+      )
+      e.Pattern-E
+      (e.Vars) (e.Commands)
+    >;
+
+  // ADT scopes accumulation
+
+  e.Pattern-B (LeftPtr s.Num s.NumArray s.FixCount e.Fixed)
+  (TkOpenADT s.Inner) (TkName e.Name) e.Pattern-M (TkCloseADT s.Inner) e.Pattern-E
+  (e.Vars) (e.Commands) =
+    <WriteLine 'ADT left||' s.Num '::' s.NumArray '::' s.FixCount>
+    <GenPattern
+      e.Pattern-B
+      (
+        LeftPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxOpenADT s.Num s.Inner s.NumArray s.FixCount) (TkName e.Name) e.Pattern-M (FxCloseADT s.Num s.Inner s.NumArray s.FixCount)
+      )
+      e.Pattern-E
+      (e.Vars) (e.Commands)
+    >;
+
+  e.Pattern-B (TkOpenADT s.Inner) (TkName e.Name) e.Pattern-M (TkCloseADT s.Inner)
+  (RightPtr s.Num s.NumArray s.FixCount e.Fixed)
+  (e.Vars) (e.Commands) =
+    <WriteLine 'ADT right||' s.Num '::' s.NumArray '::' s.FixCount>
+    <GenPattern
+      e.Pattern-B
+      (
+        RightPtr s.Num s.NumArray <Inc s.FixCount> e.Fixed
+        (FxOpenADT s.Num s.Inner s.NumArray s.FixCount) (TkName e.Name) e.Pattern-M (FxCloseADT s.Num s.Inner s.NumArray s.FixCount)
+      )
+      (e.Vars) (e.Commands)
+    >;
+
+  // Pointers which meets must be annihilated
+
+  e.Pattern-B (LeftPtr s.Num s.NumArray s.FixCountLeft e.FixedLeft) (RightPtr s.Num s.NumArray s.FixCountRight e.FixedRight) e.Pattern-E
+  (e.Vars) (e.Commands) = 
     <WriteLine 'Annihilate and take fixed data'>
     <WriteLine 'from left of size' s.FixCountLeft>
     <WriteLine 'from right of size' s.FixCountRight>
     <GenPattern
-      e.Pattern-B e.Pattern-E
-      (e.Vars)
-      (
-        e.Commands
-        (CmdCreateVector AlgLeft)
-        (CmdTakeFixed AlgLeft s.Num s.FixCountLeft e.FixedCommandsLeft)
-        (CmdCreateVector AlgRight)
-        (CmdTakeFixed AlgRight s.Num s.FixCountRight e.FixedCommandsRight)
-      )
+      e.Pattern-B e.FixedLeft e.FixedRight e.Pattern-E
+      (e.Vars) (e.Commands (CmdCreateVector AlgLeft s.NumArray s.FixCountLeft) (CmdCreateVector AlgRight s.NumArray s.FixCountRight))
     >;
-    //-------------------------
-    // Approved
-    //-------------------------
+}
 
-  // Brackets recognition
-  e.Pattern-B (e.FixedCommands LeftPtr s.Num s.FixCount) (TkOpenBracket s.Inner)
-  e.Pattern-M (TkCloseBracket s.Inner) e.Pattern-E
-  (e.Vars) (e.Commands) =
-    <WriteLine 'brackets left'>
-    <WriteLine s.FixCount>
-    <GenPattern
-      e.Pattern-B
-      (
-        e.FixedCommands
-        (
-          CmdCheckBrackets s.Num s.Inner s.FixCount
-          (LeftPtr s.Inner 0) e.Pattern-M (RightPtr s.Inner 0)
-        )
-        LeftPtr s.Num <Inc s.FixCount>
-      )
-      e.Pattern-E
-      (e.Vars) (e.Commands)
-    >;
-    //-------------------------
-    // Approved
-    //-------------------------
-
-  e.Pattern-B (TkOpenBracket s.Inner) e.Pattern-M (TkCloseBracket s.Inner)
-  (RightPtr s.Num s.FixCount e.FixedCommands) e.Pattern-E
-  (e.Vars) (e.Commands) =
-    <WriteLine 'brackets right'>
-    <WriteLine s.FixCount>
-    <GenPattern
-      e.Pattern-B
-      (RightPtr s.Num <Inc s.FixCount> e.FixedCommands (CmdCheckBrackets s.Num s.Inner s.FixCount (LeftPtr s.Inner 0) e.Pattern-M (RightPtr s.Inner 0)))
-      e.Pattern-E
-      (e.Vars) (e.Commands)
-    >;
-    //-------------------------
-    // Approved
-    //-------------------------
-
-  //ADT scopes recognition
-  e.Pattern-B (e.FixedCommands LeftPtr s.Num s.FixCount ) (TkOpenADT s.Inner)
-  (TkName e.Name) e.Pattern-M (TkCloseADT s.Inner) e.Pattern-E
-  (e.Vars) (e.Commands) =
-    <WriteLine 'adt left'>
-    <WriteLine s.FixCount>
-    <GenPattern
-      e.Pattern-B
-      (
-        e.FixedCommands
-        (
-          CmdCheckADT s.Inner s.FixCount (TkName e.Name) (LeftPtr s.Inner 0) e.Pattern-M (RightPtr s.Inner 0)
-        )
-        LeftPtr s.Num <Inc s.FixCount>
-      )
-      e.Pattern-E
-      (e.Vars)
-      (e.Commands)
-    >;
-    //-------------------------
-    // Approved
-    //-------------------------
-
-  e.Pattern-B (TkOpenADT s.Inner) (TkName e.Name) e.Pattern-M
-  (TkCloseADT s.Inner) (RightPtr s.Num s.FixCount e.FixedCommands) e.Pattern-E
-  (e.Vars) (e.Commands) =
-    <WriteLine 'adt right'>
-    <WriteLine s.FixCount>
-    <GenPattern
-      e.Pattern-B
-      (RightPtr s.Num <Inc s.FixCount> e.FixedCommands (CmdCheckADT s.Inner s.FixCount (TkName e.Name) (LeftPtr s.Inner 0) e.Pattern-M (RightPtr s.Inner 0)))
-      e.Pattern-E
-      (e.Vars)
-      (e.Commands)
-    >;
-    //-------------------------
-    // Approved
-    //-------------------------
+GenPattern {
 
   // Variable recognition
   e.Pattern-B (e.FixedCommands LeftPtr s.Num s.FixCount) (TkVariable 'e' e.Index) e.Pattern-E
