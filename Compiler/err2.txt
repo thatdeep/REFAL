@@ -1,8 +1,8 @@
 
-Total program time: 0.163 seconds.
-Pattern match time: 0.064 seconds (54.6%, 39.2%), p/r = 1.20.
-Building result time: 0.053 seconds (45.4%, 32.6%), r/p = 0.83.
-Total refal time: 0.117 seconds (71.8%).
-Builtin time: 0.046 seconds (28.2%).
-Step count 39486
-Memory used 24291 nodes, 24291 * 40 = 971640 bytes
+Total program time: 0.012 seconds.
+Pattern match time: 0.004 seconds (48.7%, 33.1%), p/r = 0.95.
+Building result time: 0.004 seconds (51.3%, 34.9%), r/p = 1.06.
+Total refal time: 0.008 seconds (68.0%).
+Builtin time: 0.004 seconds (32.0%).
+Step count 3349
+Memory used 1683 nodes, 1683 * 40 = 67320 bytes
